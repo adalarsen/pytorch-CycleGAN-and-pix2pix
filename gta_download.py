@@ -17,7 +17,6 @@ AUGMENT_DATA = True
 M, N = 256, 256
 # Percentage validation size
 val_size = 10
-USE_ROADMAP_AS_TARGET=True
 
 from PIL import Image
 import requests
@@ -31,7 +30,6 @@ import requests
 def download_url(url, target_path):
     if os.path.isfile(target_path):
         print("File already downloaded.", target_path)
-        return
     print("Downloading image:",url , "Saving to:", target_path)
     img_data = requests.get(url).content
     filedir = os.path.dirname(target_path)
@@ -39,9 +37,7 @@ def download_url(url, target_path):
     with open(target_path, 'wb') as handler:
         handler.write(img_data)
 
-save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gta_data")
-#target_dir = os.path.join(save_path, "trainB")
-#input_dir = os.path.join(save_path, "trainA")
+save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "gta")
 original_image_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),"gta_images")
 
 
@@ -60,7 +56,7 @@ if DOWNLOAD_IMAGES:
         download_url(url, target_path)
 
 if os.path.isdir(save_path):
-    answer = input("Folder {} already exist. Are you sure you want to overrwrite it? [y/n]".format(save_path)).lower()
+    answer = input("Folder 'data/gta/' already exist. Are you sure you want to overrwrite it? [y/n]").lower()
     if answer == 'y' or answer == 'yes' or answer == '1':
         print("Removing old content...")
         shutil.rmtree(save_path)
@@ -68,18 +64,24 @@ if os.path.isdir(save_path):
         print("Cancelling...")
         exit(1)
 print("Can't find gta dataset, making dataset")
-os.makedirs(os.path.join(save_path, "train"), exist_ok=True)
-os.makedirs(os.path.join(save_path, "val"), exist_ok=True)
-
-def save_aligned(im1, im2, path):
-    im1 = np.asarray(im1)
-    im2 = np.asarray(im2)
-    im = np.concatenate((im1, im2), axis=1)
-    im = Image.fromarray(im)
-    im.save(path)
-
+os.makedirs(os.path.join(save_path, "input"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "input", "train"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "input", "val"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "input", "train","data"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "input", "val", "data"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target1"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target1", "train"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target1", "train", "data"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target1", "val"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target1", "val","data"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target2"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target2", "val"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target2", "val", "data"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target2", "train"), exist_ok=True)
+os.makedirs(os.path.join(save_path, "target2", "train", "data"), exist_ok=True)
 
 images = []
+print("Downloading images...")
 IMAGE_NAMES = [
     "GTAV_ROADMAP_8192x8192.png",
     "GTAV_ATLUS_8192x8192.png",
@@ -102,50 +104,48 @@ if FILTER_DATA:
 val_idxs = np.random.choice(idx, val_size,replace=False)
 print("Saving {}% of the complete image. Number of images: {}".format(int(100*(len(idx) / len(parted0))), len(idx)))
 iters = 0
-if USE_ROADMAP_AS_TARGET:
-    print("Using ROADMAP as target image")
-else:
-    print("Using ATLUS as target image")
 for i in idx:
     image_cat = "train"
     if i in val_idxs:
         image_cat = "val"
-    savedir = os.path.join(save_path, image_cat)
-
-    if USE_ROADMAP_AS_TARGET:
-        target_im = Image.fromarray(parted0[i])
-    else:
-        target_im = Image.fromarray(parted1[i])
-    input_image = Image.fromarray(parted2[i])
-
-    save_aligned(input_image, target_im, os.path.join(savedir, str(iters) + '_0.png'))
+    im1 = Image.fromarray(parted0[i])
+    im2 = Image.fromarray(parted1[i])
+    im3 = Image.fromarray(parted2[i])
+    
+    im1.save(os.path.join(save_path, 'target1', image_cat, 'data', str(iters) + '_0.png'))
     if AUGMENT_DATA:
-        save_aligned(
-            input_image.transpose(Image.FLIP_LEFT_RIGHT),
-            target_im.transpose(Image.FLIP_LEFT_RIGHT),
-            os.path.join(savedir, "{}_1.png".format(iters))
-        )
-        save_aligned(
-            input_image.transpose(Image.FLIP_TOP_BOTTOM),
-            target_im.transpose(Image.FLIP_TOP_BOTTOM),
-            os.path.join(savedir, "{}_2.png".format(iters))
-        )
-        for rotate in [90, 180, 270]:
-            save_aligned(
-                input_image.rotate(rotate),
-                target_im.rotate(rotate),
-                os.path.join(savedir, "{}_{}_0.png".format(iters, rotate))
-            )
-            save_aligned(
-                input_image.rotate(rotate).transpose(Image.FLIP_LEFT_RIGHT),
-                target_im.rotate(rotate).transpose(Image.FLIP_LEFT_RIGHT),
-                os.path.join(savedir, "{}_{}_1.png".format(iters, rotate))
-            )
-            save_aligned(
-                input_image.rotate(rotate).transpose(Image.FLIP_TOP_BOTTOM),
-                target_im.rotate(rotate).transpose(Image.FLIP_TOP_BOTTOM),
-                os.path.join(savedir, "{}_{}_2.png".format(iters, rotate))
-            )
+        im1.transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_1.png"))  
+        im1.transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_2.png"))  
+        im1.rotate(90).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_90_0.png"))
+        im1.rotate(90).transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_90_1.png"))
+        im1.rotate(90).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_90_2.png"))
+        im1.rotate(180).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_180.png"))
+        im1.rotate(270).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_270_0.png"))  
+        im1.rotate(270).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target1",image_cat,"data", str(iters) + "_270_1.png"))
+
+
+    im2.save(os.path.join(save_path, 'target2', image_cat, 'data', str(iters) + '_0.png'))
+    if AUGMENT_DATA:
+        im2.transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_1.png"))  
+        im2.transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_2.png"))  
+        im2.rotate(90).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_90_0.png"))
+        im2.rotate(90).transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_90_1.png"))
+        im2.rotate(90).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_90_2.png"))
+        im2.rotate(180).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_180.png"))
+        im2.rotate(270).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_270_0.png"))  
+        im2.rotate(270).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "target2",image_cat,"data", str(iters) + "_270_1.png"))
+
+    im3.save(os.path.join(save_path, 'input', image_cat, 'data', str(iters) + '_0.png'))
+    if AUGMENT_DATA:
+        im3.transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_1.png"))  
+        im3.transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_2.png"))  
+        im3.rotate(90).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_90_0.png"))
+        im3.rotate(90).transpose(Image.FLIP_LEFT_RIGHT).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_90_1.png"))
+        im3.rotate(90).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_90_2.png"))
+        im3.rotate(180).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_180.png"))
+        im3.rotate(270).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_270_0.png"))  
+        im3.rotate(270).transpose(Image.FLIP_TOP_BOTTOM).save(os.path.join(save_path, "input",image_cat,"data", str(iters) + "_270_1.png"))
+
     iters += 1
 
 
