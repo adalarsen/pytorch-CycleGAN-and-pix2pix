@@ -239,3 +239,17 @@ If you love cats, and love reading cool graphics, vision, and learning papers, p
 
 ## Acknowledgments
 Our code is inspired by [pytorch-DCGAN](https://github.com/pytorch/examples/tree/master/dcgan).
+
+## Changes made to the pix2pix code
+
+ResNet/U-net changes:
+pix2pix_model.py - line 32: Set netG='unet_256' for U-Net or netG='resnet_9blocks' for ResNet
+
+WGAN changes:
+networks.py - line 227: Using gan_mode "vanilla" and changing from BCEWithLogitsLoss to L1Loss
+pix2pix_model.py - line 68-69: Changing from Adam to RMSProp optimalizer and also lower the learning rate
+pix2pix_model.py - line 118: Train the discriminator 5 times more than the generator
+pix2pix_model.py - line 126: Weight clipping
+
+
+
