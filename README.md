@@ -249,8 +249,11 @@ pix2pix_model.py - line 32: Set netG='unet_256' for U-Net or netG='resnet_9block
 WGAN changes:
 
 networks.py - line 227: Using gan_mode "vanilla" and changing from BCEWithLogitsLoss to L1Loss
+
 pix2pix_model.py - line 68-69: Changing from Adam to RMSProp optimalizer and also lower the learning rate
+
 pix2pix_model.py - line 118: Train the discriminator 5 times more than the generator
+
 pix2pix_model.py - line 126: Weight clipping.
 
 
